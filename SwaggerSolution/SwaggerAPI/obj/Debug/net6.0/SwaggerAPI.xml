@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SwaggerAPI</name>
+    </assembly>
+    <members>
+        <member name="T:SwaggerAPI.Controllers.WeatherForecastController">
+            <summary>
+            Weather Controller
+            </summary>
+        </member>
+        <member name="M:SwaggerAPI.Controllers.WeatherForecastController.Get">
+            <summary>
+            Method to return all Weather forecasts
+            </summary>
+            <returns> An array of weather forecast</returns>
+        </member>
+        <member name="P:SwaggerAPI.WeatherForecast.Date">
+            <summary>
+            Date for the Weather
+            </summary>
+        </member>
+        <member name="P:SwaggerAPI.WeatherForecast.TemperatureC">
+            <summary>
+            Temperature in C
+            </summary>
+        </member>
+        <member name="P:SwaggerAPI.WeatherForecast.TemperatureF">
+            <summary>
+            Temperature in F
+            </summary>
+        </member>
+        <member name="P:SwaggerAPI.WeatherForecast.Summary">
+            <summary>
+            Summary
+            </summary>
+        </member>
+    </members>
+</doc>
