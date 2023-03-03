@@ -1,0 +1,606 @@
+Program.cs
+-----------
+using DataAccess.Context;
+using DataServices.Contract;
+using DataServices.Repository;
+using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
+using static WebAPI.Controllers.StudCourseController;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1",
+        new Microsoft.OpenApi.Models.OpenApiInfo
+        {
+            Title = "Swagger Demo API",
+            Description = "Demo API for showing Swagger ",
+            Version = "v1"
+        });
+    var filename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var filepath = Path.Combine(AppContext.BaseDirectory, filename);
+    options.IncludeXmlComments(filepath);
+
+});
+
+
+builder.Services.AddScoped<ValidationFilterAttribute>();
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+options.SuppressModelStateInvalidFilter = true);
+
+// Auto mapper
+builder.Services.AddAutoMapper(typeof(Program));
+
+
+builder.Services.AddSingleton<StuCourseContext>();
+builder.Services.AddScoped<IStudCourse,StudCourse>();
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Swagger Demo ApI");
+    });
+}
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+--------------------------------------------------------
+Controller
+----------
+using AutoMapper;
+using DataAccess.Model;
+using DataServices.Contract;
+using DataServices.DTO;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using System.Data.SqlClient;
+
+namespace WebAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class StudCourseController : ControllerBase
+    {
+        private readonly IStudCourse _studcourse;
+        private readonly IMapper _mapper;
+
+        
+        public StudCourseController(IStudCourse studcourse, IMapper mapper)
+        {
+            _studcourse = studcourse;
+            _mapper = mapper;
+        }
+
+        /// <summary>
+        /// Get all Student Details
+        /// </summary>
+        /// <returns></returns>
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
+
+        [HttpGet("GetAllStudentCourse/")]
+        public async Task<IActionResult> GetAllStudCourse()
+        {
+            
+            try
+            {
+                var sc = await _studcourse.GetAllStudCourse();
+                //var Stucoursedetails = _mapper.Map<GetAllStudCourse[]>(sc);
+                return Ok(sc);
+
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                //log error
+                return StatusCode(400, ex.Message);
+            }
+
+        }
+
+
+
+        ///// <summary>
+        ///// Get all Students by age
+        ///// </summary>
+        ///// <returns></returns>
+        //[ProducesResponseType(400)]
+        //[ProducesResponseType(200)]
+
+        //[HttpGet("Getbyage/{age}")]
+        //public async Task<IActionResult> GetByAge()
+        //{
+
+            
+        //    try
+        //    {
+        //        var sc = await _studcourse.GetByAge();
+        //        //var Stucoursedetails = _mapper.Map<GetCountByAge[]>(sc);
+        //        return Ok(sc);
+
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        return StatusCode(500, ex.Message);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        //log error
+        //        return StatusCode(400, ex.Message);
+        //    }
+
+        //}
+
+
+        /// <summary>
+        /// Soft Delete
+        /// </summary>
+        /// <returns></returns>
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
+
+        [HttpPut("{id}")]
+        [ServiceFilter(typeof(ValidationFilterAttribute))]
+        public async Task<IActionResult> UpdateItem(int id, SoftDeleteStudent stu)
+        {
+            try
+            {
+                if (id < 0)
+                {
+                    throw new Exception("Id cannot be negative");
+                }
+
+
+                var message = await _studcourse.SoftDelete(id, stu);
+                return Ok(message);
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                //log error
+                return StatusCode(400, ex.Message);
+            }
+        }
+
+
+        /// <summary>
+        /// Get all Student Details by grouping
+        /// </summary>
+        /// <returns></returns>
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
+
+        [HttpGet("GetByGroup/")]
+        public async Task<IActionResult> GetAllByGrouping()
+        {
+
+            try
+            {
+                var sc = await _studcourse.GetAllByGrouping();
+                //var Stucoursedetails = _mapper.Map<GetAllStudCourse[]>(sc);
+                return Ok(sc);
+
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                //log error
+                return StatusCode(400, ex.Message);
+            }
+
+        }
+
+
+        /// <summary>
+        /// Get Student Details by Id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> StudentbyId(int id)
+        {
+            try
+            {
+                //validate id
+                if (id < 0)
+                {
+                    throw new Exception("Id cannot be negative");
+                }
+
+                var item = await _studcourse.StudentbyId(id);
+
+                if (item == null)
+                    return NotFound();
+
+                return Ok(item);
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                //log error
+                return StatusCode(400, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Update Details
+        /// </summary>
+        /// <returns></returns>
+
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
+
+        [HttpPut("Update/{id}")]
+        [ServiceFilter(typeof(ValidationFilterAttribute))]
+        public async Task<IActionResult> UpdateDetails(int id, UpdateDetails course)
+        {
+            try
+            {
+                if (id < 0)
+                {
+                    throw new Exception("Id cannot be negative");
+                }
+
+
+                var message = await _studcourse.UpdateDetails(id, course);
+                return Ok(message);
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                //log error
+                return StatusCode(400, ex.Message);
+            }
+        }
+
+
+
+
+        /// <summary>
+        /// Validation
+        /// </summary>
+
+        public class ValidationFilterAttribute : IActionFilter
+        {
+            public void OnActionExecuting(ActionExecutingContext context)
+            {
+                if (!context.ModelState.IsValid)
+                {
+                    context.Result = new UnprocessableEntityObjectResult(context.ModelState);
+                }
+            }
+            public void OnActionExecuted(ActionExecutedContext context) { }
+        }
+    }
+}
+-------------------------------------------------------------------------------
+Repository
+-----------
+using Dapper;
+using DataAccess.Context;
+using DataAccess.Model;
+using DataServices.Contract;
+using DataServices.DTO;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataServices.Repository
+{
+    public class StudCourse : IStudCourse
+    {
+        private readonly StuCourseContext _sccontext;
+
+        public StudCourse(StuCourseContext context)
+        {
+            _sccontext = context;
+        }
+
+        /// <summary>
+        /// Method to get all student Details
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<GetAllStudCourse>> GetAllStudCourse()
+        {
+            try
+            {
+                using (var connection = _sccontext.CreateConnection())
+                {
+                    var items = await connection.QueryAsync<GetAllStudCourse>("sp_GetAllStudents", new { },
+                        commandType: CommandType.StoredProcedure);
+                    return items.ToList();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw ex;
+            }
+        }
+
+        ///// <summary>
+        ///// Get details by age
+        ///// </summary>
+        ///// <returns></returns>
+        //public async Task<IEnumerable<GetCountByAge>> GetByAge()
+        //{
+        //    try
+        //    {
+        //        using (var connection = _sccontext.CreateConnection())
+        //        {
+        //            var count = await connection.QueryAsync<GetCountByAge>("sp_Getbyage", new { },
+        //                commandType: CommandType.StoredProcedure);
+        //            return count.ToList();
+        //        }
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        throw ex;
+        //    }
+        //}
+
+
+        /// <summary>
+        /// Soft Delete
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="updatedBook"></param>
+        /// <returns></returns>
+        public async Task<string> SoftDelete(int id, SoftDeleteStudent softdel)
+        {
+            try
+            {
+                using (var connection = _sccontext.CreateConnection())
+                {
+
+
+                    var message = await connection.ExecuteScalarAsync<string>("sp_SoftDelete", new { stuid=id, isactive = softdel.IsActive },
+                     commandType: CommandType.StoredProcedure);
+
+                    return message;
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Method to get all student Details
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IEnumerable<GetByGroupofCourse>> GetAllByGrouping()
+        {
+            try
+            {
+                using (var connection = _sccontext.CreateConnection())
+                {
+                    var items = await connection.QueryAsync<GetByGroupofCourse>("sp_GetByGroupofCourse", new { },
+                        commandType: CommandType.StoredProcedure);
+                    return items.ToList();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Get details by Id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<StudentCourseById> StudentbyId(int id)
+        {
+            try
+            {
+                using (var connection = _sccontext.CreateConnection())
+                {
+                    var book = await connection.QuerySingleOrDefaultAsync<StudentCourseById>("sp_StudentById", new { Id = id },
+                        commandType: CommandType.StoredProcedure);
+                    return book;
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// Update details
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="updatedetails"></param>
+        /// <returns></returns>
+        public async Task<string> UpdateDetails(int id, UpdateDetails updatedetails)
+        {
+            try
+            {
+                using (var connection = _sccontext.CreateConnection())
+                {
+
+
+                    var message = await connection.ExecuteScalarAsync<string>("sp_UpdateDetails", new { StuId = id, StuFname= updatedetails.StuFname,StuLname= updatedetails.StuLname,CourseId=updatedetails.CourseId, CourseName = updatedetails.CourseName, IsActive= updatedetails.IsActive},
+                     commandType: CommandType.StoredProcedure);
+
+                    return message;
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw ex;
+            }
+        }
+
+    }
+}
+-----------------------------------------------------------------------------------
+Interface
+----------
+using DataAccess.Model;
+using DataServices.DTO;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataServices.Contract
+{
+    public interface IStudCourse
+    {
+        public Task<IEnumerable<GetAllStudCourse>> GetAllStudCourse();
+
+        //public Task<IEnumerable<GetCountByAge>> GetByAge();
+
+        public Task<string> SoftDelete(int id, SoftDeleteStudent softdel);
+
+        public Task<IEnumerable<GetByGroupofCourse>> GetAllByGrouping();
+
+        public Task<StudentCourseById> StudentbyId(int id);
+
+        public Task<string> UpdateDetails(int id, UpdateDetails updatedetails);
+
+    }
+}
+------------------------------------------------------
+Context
+---------
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccess.Context
+{
+    public class StuCourseContext
+    {
+        private readonly IConfiguration configures;
+        private readonly string? connect;
+        public StuCourseContext(IConfiguration configure)
+        {
+            configures = configure;
+            connect = configure.GetConnectionString("SqlConnection");
+        }
+        public IDbConnection CreateConnection() => new SqlConnection(connect);
+    }
+}
+-----------------------------------------------
+Connection strings
+--------------------
+"ConnectionStrings": {
+    "SqlConnection": "server=(localdb)\\MSSQLLocalDB; database=Student; Integrated Security=true; Encrypt=false" //integrated security=true bcos windows authentication- no id password required if it was false then id and password should also be included in this line of code
+  },
+--------------------------------------------------------------
+Automapper
+-----------
+public string StuFullName => $"{StuFname},{StuLname}";   // model
+
+ public string? StuFullName { get; set; } // separate model
+
+
+// separate class
+public class FullnameMapper : Profile
+    {
+        public FullnameMapper()
+        {
+            CreateMap<StudentModel, FullNameModel>();
+        }
+    }
+
+// Auto mapper
+builder.Services.AddAutoMapper(typeof(Program));
+
+
+//Controller
+private readonly IStudCourse _studcourse;
+        private readonly IMapper _mapper;
+
+        
+        public StudCourseController(IStudCourse studcourse, IMapper mapper)
+        {
+            _studcourse = studcourse;
+            _mapper = mapper;
+        }
+----------------------------------------------------------
+Swagger
+---------
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1",
+        new Microsoft.OpenApi.Models.OpenApiInfo
+        {
+            Title = "Swagger Demo API",
+            Description = "Demo API for showing Swagger ",
+            Version = "v1"
+        });
+    var filename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var filepath = Path.Combine(AppContext.BaseDirectory, filename);
+    options.IncludeXmlComments(filepath);
+
+});
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Swagger Demo ApI");
+    });
+}
+
+<PropertyGroup>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+	</PropertyGroup>
+--------------------------------------------------------------------
+
+
+
